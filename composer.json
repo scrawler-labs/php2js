@@ -1,0 +1,20 @@
+{
+    "name": "piqon/php2js",
+    "description": "Simple library to convert php into frontend javascript code",
+    "type": "library",
+    "require": {
+        "nikic/php-parser": "^4.10"
+    },
+    "autoload": {
+        "psr-4": {
+          "PHP2JS": "./src"
+        }
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "its-pranjalpandey",
+            "email": "pranjaltech10@gmail.com"
+        }
+    ]
+}
