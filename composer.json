@@ -7,7 +7,7 @@
     },
     "autoload": {
         "psr-4": {
-          "PHP2JS": "./src"
+          "PHP2JS\\": "./src"
         }
     },
     "license": "MIT",
