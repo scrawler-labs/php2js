@@ -17,8 +17,8 @@ class PHP2JS
         }
 
         $compiler= new Compiler;
-        $jsCode = $prettyPrinter->prettyPrint($ast);
-        return $newCode;
+        $jscode = $compiler->prettyPrint($ast);
+        return $jscode;
     }
 
     public static function compileFile($input,$output=null){

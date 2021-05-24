@@ -76,7 +76,7 @@ class Compiler extends PrettyPrinterAbstract
 
     protected function pName(Name $node)
     {
-        throw new \LogicException('Classes/Namespaces cannot be added in embedded logic');
+        return implode('\\', $node->parts);
     }
 
     protected function pName_FullyQualified(Name\FullyQualified$node)
