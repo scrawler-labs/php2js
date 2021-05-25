@@ -78,7 +78,7 @@ This compiler does not support magic variables and magic functions of PHP.
 
 ### Changelog
 
-##### v0.2.0
+#### v0.2.0
 - Added support for import : `include 'test'` now converts to `import test from './test.js'`
 You can also use import_from() php function to define path of module.
 Example:
