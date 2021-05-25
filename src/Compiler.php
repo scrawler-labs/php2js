@@ -16,6 +16,7 @@ use PhpParser\PrettyPrinterAbstract;
 class Compiler extends PrettyPrinterAbstract
 {
     public $vars = array();
+    public $mode = 'js';
     // Special nodes
 
     protected function pParam(Node\Param$node)
@@ -591,6 +592,10 @@ class Compiler extends PrettyPrinterAbstract
 
     protected function pExpr_FuncCall(Expr\FuncCall$node)
     {
+        $compiled = $this->compilefn($node);
+        if($compiled){
+            return $compiled;
+        }
         return $this->pCallLhs($node->name)
         . '(' . $this->pMaybeMultiline($node->args) . ')';
     }
@@ -636,13 +641,15 @@ class Compiler extends PrettyPrinterAbstract
     protected function pExpr_Include(Expr\Include_$node)
     {
         static $map = [
-            Expr\Include_::TYPE_INCLUDE => 'include',
-            Expr\Include_::TYPE_INCLUDE_ONCE => 'include_once',
-            Expr\Include_::TYPE_REQUIRE => 'require',
-            Expr\Include_::TYPE_REQUIRE_ONCE => 'require_once',
+            Expr\Include_::TYPE_INCLUDE => 'import',
+            Expr\Include_::TYPE_INCLUDE_ONCE => 'import',
+            Expr\Include_::TYPE_REQUIRE => 'import',
+            Expr\Include_::TYPE_REQUIRE_ONCE => 'import',
         ];
 
-        return $map[$node->type] . ' ' . $this->p($node->expr);
+        $expr = trim($this->p($node->expr),"'");
+
+        return $map[$node->type] . ' ' . $expr ." from './".$expr.'.'.$this->mode."'";
     }
 
     protected function pExpr_List(Expr\List_$node)
@@ -942,11 +949,21 @@ class Compiler extends PrettyPrinterAbstract
 
     protected function pStmt_Function(Stmt\Function_$node)
     {
+        $is_async = false;
+           foreach ($node->getComments() as $comment){
+           $comment = strtolower(trim(trim($comment,'/*')));
+           if($comment == '@async'){
+               $is_async = true;
+           }
+       }
+  
         return $this->pAttrGroups($node->attrGroups)
+        . ($is_async ? 'async ' : '')
         . 'function ' . ($node->byRef ? '&' : '') . $node->name
         . '(' . $this->pCommaSeparated($node->params) . ')'
         . (null !== $node->returnType ? ' : ' . $this->p($node->returnType) : '')
         . $this->nl . '{' . $this->pStmts($node->stmts) . $this->nl . '}';
+
     }
 
     protected function pStmt_Const(Stmt\Const_$node)
@@ -1095,7 +1112,7 @@ class Compiler extends PrettyPrinterAbstract
 
     protected function pStmt_Global(Stmt\Global_$node)
     {
-        return 'global ' . $this->pCommaSeparated($node->vars) . ';';
+        return 'export ' . $this->pCommaSeparated($node->vars) . ';';
     }
 
     protected function pStmt_StaticVar(Stmt\StaticVar$node)
@@ -1276,5 +1293,24 @@ class Compiler extends PrettyPrinterAbstract
         }
 
         return $result;
+    }
+
+    private function compilefn($node){
+        // $this->pCallLhs($node->name)
+        // . '(' . $this->pMaybeMultiline($node->args) . ')';
+        $pArgs = [];
+        foreach ($node->args as $arg) {
+            if (null === $arg) {
+                $pArgs[] = '';
+            } else {
+                $pArgs[] = $this->p($arg);
+            }
+        }
+
+        if($node->name == 'import_from'){
+             return "import ".trim($pArgs[0],"'")." from ".$pArgs[1];
+        }
+        return false;
+
     }
 }
