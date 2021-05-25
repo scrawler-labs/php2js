@@ -1,4 +1,4 @@
-# PIQON PHP2JS
+# PHP2JS
 Convert php code to javascript code that can run on browser
 
 ### Installation 
