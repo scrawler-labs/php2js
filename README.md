@@ -74,3 +74,32 @@ function click()
 This was designed to convert php scripts to javascript code , this might not work with full blown php classes !
 You can call javascript functions like console.log etc right from your php code and it will work as expected in the browser.
 This compiler does not support magic variables and magic functions of PHP.
+
+
+### Changelog
+
+##### v0.2.0
+- Added support for import : `include 'test'` now converts to `import test from './test.js'`
+You can also use import_from() php function to define path of module.
+Example:
+```php
+import_from('test','./component/test.js');
+```
+will compile to 
+```js
+import test from './component/test.js';
+```
+
+- Added support for async function declaration via comment:
+```php
+// @async
+function abc(){
+return 'hi';
+}
+```
+will compile to 
+```js
+async function abc(){
+return 'hi';
+}
+```
