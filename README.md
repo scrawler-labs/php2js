@@ -89,6 +89,7 @@ will compile to
 ```js
 import test from './component/test.js';
 ```
+<br>
 
 - Added support for async function declaration via comment:
 ```php
