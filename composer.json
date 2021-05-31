@@ -1,5 +1,5 @@
 {
-    "name": "piqon/php2js",
+    "name": "scrawler/php2js",
     "description": "Simple library to convert php into frontend javascript code",
     "type": "library",
     "require": {
