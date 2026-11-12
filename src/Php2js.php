@@ -8,7 +8,7 @@ use PhpParser\ParserFactory;
 class PHP2JS
 {
     public static function compile($code,$mode = 'js'){
-        $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7);
+        $parser = (new ParserFactory)->createForHostVersion();
         $errorHandler = new \PhpParser\ErrorHandler\Collecting;
 
             $ast = $parser->parse('<?php'.PHP_EOL.$code, $errorHandler);
@@ -26,7 +26,7 @@ class PHP2JS
 
     public static function compileFile($input,$output=null,$mode='js'){
         $code = @file_get_contents($input);
-        $parser = (new ParserFactory)->create(ParserFactory::PREFER_PHP7);
+        $parser = (new ParserFactory)->createForHostVersion();
         try {
             $ast = $parser->parse($code);
         } catch (Error $error) {
@@ -41,6 +41,6 @@ class PHP2JS
             file_put_contents($output,$jscode);
             return;
         }
-        return $newCode;
+        return $jscode;
     }
 }

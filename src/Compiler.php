@@ -255,7 +255,7 @@ class Compiler extends PrettyPrinterAbstract
 
     protected function pExpr_Assign(Expr\Assign$node)
     {
-        if(! in_array($node->var->name,$this->vars)){
+        if(! in_array($node->var->name,$this->var, true)){
         array_push($this->vars,$node->var->name);
         $node->var->name = 'let '. $node->var->name;
         }
@@ -1295,7 +1295,8 @@ class Compiler extends PrettyPrinterAbstract
         return $result;
     }
 
-    private function compilefn($node){
+    private function compilefn(Expr\FuncCall $node): string|false
+	{
         // $this->pCallLhs($node->name)
         // . '(' . $this->pMaybeMultiline($node->args) . ')';
         $pArgs = [];
@@ -1307,7 +1308,10 @@ class Compiler extends PrettyPrinterAbstract
             }
         }
 
-        if($node->name == 'import_from'){
+        if(
+			$node->name instanceof Name
+    		&& $node->name == 'import_from'
+		){
              return "import ".trim($pArgs[0],"'")." from ".$pArgs[1];
         }
         return false;
