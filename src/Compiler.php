@@ -12,12 +12,30 @@ use PhpParser\Node\Scalar;
 use PhpParser\Node\Scalar\MagicConst;
 use PhpParser\Node\Stmt;
 use PhpParser\PrettyPrinterAbstract;
+use PhpParser\Node\Scalar\Int_;
+use PhpParser\Node\Scalar\Float_;
 
 class Compiler extends PrettyPrinterAbstract
 {
     public $vars = array();
     public $mode = 'js';
     // Special nodes
+
+	protected function pInfixOpCompat(
+		string $class,
+		Node $leftNode,
+		string $operatorString,
+		Node $rightNode
+	): string {
+		return parent::pInfixOp(
+			$class,
+			$leftNode,
+			$operatorString,
+			$rightNode,
+			self::MAX_PRECEDENCE,
+			self::MAX_PRECEDENCE
+		);
+	}
 
     protected function pParam(Node\Param$node)
     {
@@ -75,10 +93,10 @@ class Compiler extends PrettyPrinterAbstract
 
     // Names
 
-    protected function pName(Name $node)
-    {
-        return implode('\\', $node->parts);
-    }
+    protected function pName(Name $node): string
+	{
+		return $node->toString();
+	}
 
     protected function pName_FullyQualified(Name\FullyQualified$node)
     {
@@ -188,7 +206,7 @@ class Compiler extends PrettyPrinterAbstract
         return '"' . $this->pEncapsList($node->parts, '"') . '"';
     }
 
-    protected function pScalar_LNumber(Scalar\LNumber$node)
+    protected function pScalar_Int(Int_ $node)
     {
         if ($node->value === -\PHP_INT_MAX-1) {
             // PHP_INT_MIN cannot be represented as a literal,
@@ -196,8 +214,8 @@ class Compiler extends PrettyPrinterAbstract
             return '(-' . \PHP_INT_MAX . '-1)';
         }
 
-        $kind = $node->getAttribute('kind', Scalar\LNumber::KIND_DEC);
-        if (Scalar\LNumber::KIND_DEC === $kind) {
+        $kind = $node->getAttribute('kind', Int_::KIND_DEC);
+        if (Int_::KIND_DEC === $kind) {
             return (string) $node->value;
         }
 
@@ -209,17 +227,17 @@ class Compiler extends PrettyPrinterAbstract
             $str = (string) $node->value;
         }
         switch ($kind) {
-            case Scalar\LNumber::KIND_BIN:
+            case Int_::KIND_BIN:
                 return $sign . '0b' . base_convert($str, 10, 2);
-            case Scalar\LNumber::KIND_OCT:
+            case Int_::KIND_OCT:
                 return $sign . '0' . base_convert($str, 10, 8);
-            case Scalar\LNumber::KIND_HEX:
+            case Int_::KIND_HEX:
                 return $sign . '0x' . base_convert($str, 10, 16);
         }
         throw new \Exception('Invalid number kind');
     }
 
-    protected function pScalar_DNumber(Scalar\DNumber$node)
+    protected function pScalar_Float(Float_ $node)
     {
         if (!is_finite($node->value)) {
             if ($node->value === \INF) {
@@ -255,219 +273,219 @@ class Compiler extends PrettyPrinterAbstract
 
     protected function pExpr_Assign(Expr\Assign$node)
     {
-        if(! in_array($node->var->name,$this->vars)){
+        if(! in_array($node->var->name,$this->var, true)){
         array_push($this->vars,$node->var->name);
         $node->var->name = 'let '. $node->var->name;
         }
 
-        return $this->pInfixOp(Expr\Assign::class, $node->var, ' = ', $node->expr);
+        return $this->pInfixOpCompat(Expr\Assign::class, $node->var, ' = ', $node->expr);
     }
 
     protected function pExpr_AssignRef(Expr\AssignRef$node)
     {
-        return $this->pInfixOp(Expr\AssignRef::class, $node->var, ' =& ', $node->expr);
+        return $this->pInfixOpCompat(Expr\AssignRef::class, $node->var, ' =& ', $node->expr);
     }
 
     protected function pExpr_AssignOp_Plus(AssignOp\Plus$node)
     {
-        return $this->pInfixOp(AssignOp\Plus::class, $node->var, ' += ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\Plus::class, $node->var, ' += ', $node->expr);
     }
 
     protected function pExpr_AssignOp_Minus(AssignOp\Minus$node)
     {
-        return $this->pInfixOp(AssignOp\Minus::class, $node->var, ' -= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\Minus::class, $node->var, ' -= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_Mul(AssignOp\Mul$node)
     {
-        return $this->pInfixOp(AssignOp\Mul::class, $node->var, ' *= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\Mul::class, $node->var, ' *= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_Div(AssignOp\Div$node)
     {
-        return $this->pInfixOp(AssignOp\Div::class, $node->var, ' /= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\Div::class, $node->var, ' /= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_Concat(AssignOp\Concat$node)
     {
-        return $this->pInfixOp(AssignOp\Concat::class, $node->var, ' .= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\Concat::class, $node->var, ' .= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_Mod(AssignOp\Mod$node)
     {
-        return $this->pInfixOp(AssignOp\Mod::class, $node->var, ' %= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\Mod::class, $node->var, ' %= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_BitwiseAnd(AssignOp\BitwiseAnd$node)
     {
-        return $this->pInfixOp(AssignOp\BitwiseAnd::class, $node->var, ' &= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\BitwiseAnd::class, $node->var, ' &= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_BitwiseOr(AssignOp\BitwiseOr$node)
     {
-        return $this->pInfixOp(AssignOp\BitwiseOr::class, $node->var, ' |= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\BitwiseOr::class, $node->var, ' |= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_BitwiseXor(AssignOp\BitwiseXor$node)
     {
-        return $this->pInfixOp(AssignOp\BitwiseXor::class, $node->var, ' ^= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\BitwiseXor::class, $node->var, ' ^= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_ShiftLeft(AssignOp\ShiftLeft$node)
     {
-        return $this->pInfixOp(AssignOp\ShiftLeft::class, $node->var, ' <<= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\ShiftLeft::class, $node->var, ' <<= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_ShiftRight(AssignOp\ShiftRight$node)
     {
-        return $this->pInfixOp(AssignOp\ShiftRight::class, $node->var, ' >>= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\ShiftRight::class, $node->var, ' >>= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_Pow(AssignOp\Pow$node)
     {
-        return $this->pInfixOp(AssignOp\Pow::class, $node->var, ' **= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\Pow::class, $node->var, ' **= ', $node->expr);
     }
 
     protected function pExpr_AssignOp_Coalesce(AssignOp\Coalesce$node)
     {
-        return $this->pInfixOp(AssignOp\Coalesce::class, $node->var, ' ??= ', $node->expr);
+        return $this->pInfixOpCompat(AssignOp\Coalesce::class, $node->var, ' ??= ', $node->expr);
     }
 
     // Binary expressions
 
     protected function pExpr_BinaryOp_Plus(BinaryOp\Plus$node)
     {
-        return $this->pInfixOp(BinaryOp\Plus::class, $node->left, ' + ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Plus::class, $node->left, ' + ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Minus(BinaryOp\Minus$node)
     {
-        return $this->pInfixOp(BinaryOp\Minus::class, $node->left, ' - ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Minus::class, $node->left, ' - ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Mul(BinaryOp\Mul$node)
     {
-        return $this->pInfixOp(BinaryOp\Mul::class, $node->left, ' * ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Mul::class, $node->left, ' * ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Div(BinaryOp\Div$node)
     {
-        return $this->pInfixOp(BinaryOp\Div::class, $node->left, ' / ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Div::class, $node->left, ' / ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Concat(BinaryOp\Concat$node)
     {
-        return $this->pInfixOp(BinaryOp\Concat::class, $node->left, ' . ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Concat::class, $node->left, ' . ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Mod(BinaryOp\Mod$node)
     {
-        return $this->pInfixOp(BinaryOp\Mod::class, $node->left, ' % ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Mod::class, $node->left, ' % ', $node->right);
     }
 
     protected function pExpr_BinaryOp_BooleanAnd(BinaryOp\BooleanAnd$node)
     {
-        return $this->pInfixOp(BinaryOp\BooleanAnd::class, $node->left, ' && ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\BooleanAnd::class, $node->left, ' && ', $node->right);
     }
 
     protected function pExpr_BinaryOp_BooleanOr(BinaryOp\BooleanOr$node)
     {
-        return $this->pInfixOp(BinaryOp\BooleanOr::class, $node->left, ' || ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\BooleanOr::class, $node->left, ' || ', $node->right);
     }
 
     protected function pExpr_BinaryOp_BitwiseAnd(BinaryOp\BitwiseAnd$node)
     {
-        return $this->pInfixOp(BinaryOp\BitwiseAnd::class, $node->left, ' & ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\BitwiseAnd::class, $node->left, ' & ', $node->right);
     }
 
     protected function pExpr_BinaryOp_BitwiseOr(BinaryOp\BitwiseOr$node)
     {
-        return $this->pInfixOp(BinaryOp\BitwiseOr::class, $node->left, ' | ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\BitwiseOr::class, $node->left, ' | ', $node->right);
     }
 
     protected function pExpr_BinaryOp_BitwiseXor(BinaryOp\BitwiseXor$node)
     {
-        return $this->pInfixOp(BinaryOp\BitwiseXor::class, $node->left, ' ^ ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\BitwiseXor::class, $node->left, ' ^ ', $node->right);
     }
 
     protected function pExpr_BinaryOp_ShiftLeft(BinaryOp\ShiftLeft$node)
     {
-        return $this->pInfixOp(BinaryOp\ShiftLeft::class, $node->left, ' << ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\ShiftLeft::class, $node->left, ' << ', $node->right);
     }
 
     protected function pExpr_BinaryOp_ShiftRight(BinaryOp\ShiftRight$node)
     {
-        return $this->pInfixOp(BinaryOp\ShiftRight::class, $node->left, ' >> ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\ShiftRight::class, $node->left, ' >> ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Pow(BinaryOp\Pow$node)
     {
-        return $this->pInfixOp(BinaryOp\Pow::class, $node->left, ' ** ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Pow::class, $node->left, ' ** ', $node->right);
     }
 
     protected function pExpr_BinaryOp_LogicalAnd(BinaryOp\LogicalAnd$node)
     {
-        return $this->pInfixOp(BinaryOp\LogicalAnd::class, $node->left, ' and ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\LogicalAnd::class, $node->left, ' and ', $node->right);
     }
 
     protected function pExpr_BinaryOp_LogicalOr(BinaryOp\LogicalOr$node)
     {
-        return $this->pInfixOp(BinaryOp\LogicalOr::class, $node->left, ' or ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\LogicalOr::class, $node->left, ' or ', $node->right);
     }
 
     protected function pExpr_BinaryOp_LogicalXor(BinaryOp\LogicalXor$node)
     {
-        return $this->pInfixOp(BinaryOp\LogicalXor::class, $node->left, ' xor ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\LogicalXor::class, $node->left, ' xor ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Equal(BinaryOp\Equal$node)
     {
-        return $this->pInfixOp(BinaryOp\Equal::class, $node->left, ' == ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Equal::class, $node->left, ' == ', $node->right);
     }
 
     protected function pExpr_BinaryOp_NotEqual(BinaryOp\NotEqual$node)
     {
-        return $this->pInfixOp(BinaryOp\NotEqual::class, $node->left, ' != ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\NotEqual::class, $node->left, ' != ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Identical(BinaryOp\Identical$node)
     {
-        return $this->pInfixOp(BinaryOp\Identical::class, $node->left, ' === ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Identical::class, $node->left, ' === ', $node->right);
     }
 
     protected function pExpr_BinaryOp_NotIdentical(BinaryOp\NotIdentical$node)
     {
-        return $this->pInfixOp(BinaryOp\NotIdentical::class, $node->left, ' !== ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\NotIdentical::class, $node->left, ' !== ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Spaceship(BinaryOp\Spaceship$node)
     {
-        return $this->pInfixOp(BinaryOp\Spaceship::class, $node->left, ' <=> ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Spaceship::class, $node->left, ' <=> ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Greater(BinaryOp\Greater$node)
     {
-        return $this->pInfixOp(BinaryOp\Greater::class, $node->left, ' > ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Greater::class, $node->left, ' > ', $node->right);
     }
 
     protected function pExpr_BinaryOp_GreaterOrEqual(BinaryOp\GreaterOrEqual$node)
     {
-        return $this->pInfixOp(BinaryOp\GreaterOrEqual::class, $node->left, ' >= ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\GreaterOrEqual::class, $node->left, ' >= ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Smaller(BinaryOp\Smaller$node)
     {
-        return $this->pInfixOp(BinaryOp\Smaller::class, $node->left, ' < ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Smaller::class, $node->left, ' < ', $node->right);
     }
 
     protected function pExpr_BinaryOp_SmallerOrEqual(BinaryOp\SmallerOrEqual$node)
     {
-        return $this->pInfixOp(BinaryOp\SmallerOrEqual::class, $node->left, ' <= ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\SmallerOrEqual::class, $node->left, ' <= ', $node->right);
     }
 
     protected function pExpr_BinaryOp_Coalesce(BinaryOp\Coalesce$node)
     {
-        return $this->pInfixOp(BinaryOp\Coalesce::class, $node->left, ' ?? ', $node->right);
+        return $this->pInfixOpCompat(BinaryOp\Coalesce::class, $node->left, ' ?? ', $node->right);
     }
 
     protected function pExpr_Instanceof(Expr\Instanceof_$node)
@@ -788,7 +806,7 @@ class Compiler extends PrettyPrinterAbstract
     {
         // a bit of cheating: we treat the ternary as a binary op where the ?...: part is the operator.
         // this is okay because the part between ? and : never needs parentheses.
-        return $this->pInfixOp(Expr\Ternary::class,
+        return $this->pInfixOpCompat(Expr\Ternary::class,
             $node->cond, ' ?' . (null !== $node->if ? ' ' . $this->p($node->if) . ' ' : '') . ': ', $node->else
         );
     }
@@ -1295,7 +1313,8 @@ class Compiler extends PrettyPrinterAbstract
         return $result;
     }
 
-    private function compilefn($node){
+    private function compilefn(Expr\FuncCall $node): string|false
+	{
         // $this->pCallLhs($node->name)
         // . '(' . $this->pMaybeMultiline($node->args) . ')';
         $pArgs = [];
@@ -1307,7 +1326,10 @@ class Compiler extends PrettyPrinterAbstract
             }
         }
 
-        if($node->name == 'import_from'){
+        if(
+			$node->name instanceof Name
+    		&& $node->name == 'import_from'
+		){
              return "import ".trim($pArgs[0],"'")." from ".$pArgs[1];
         }
         return false;

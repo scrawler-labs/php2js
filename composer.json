@@ -3,7 +3,8 @@
     "description": "Simple library to convert php into frontend javascript code",
     "type": "library",
     "require": {
-        "nikic/php-parser": "^4.10"
+        "php": "^8.5",
+    	"nikic/php-parser": "^5.9"
     },
     "autoload": {
         "psr-4": {
